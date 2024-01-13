@@ -7,6 +7,7 @@ body {
   
   ul{
     list-style-type: none;
+    display: flex;
   }
   
   .header {
@@ -110,7 +111,7 @@ body {
     outline: none;
   }
   
-  .search-btn {
+  .search-btn, .load-more{
     box-sizing: border-box;
     padding: 8px 16px;
     border-radius: 8px;
@@ -126,6 +127,10 @@ body {
   }
   
   .search-btn:hover {
+    background-color: #6c8cff;
+  }
+
+  .load-more:hover {
     background-color: #6c8cff;
   }
   
@@ -160,4 +165,8 @@ body {
   @keyframes fillLq {
     0% , 10% { background-position: 0 120px}
     90% , 100% { background-position: 0 0}
+  }
+
+  .load-more{
+    margin: 40px auto;
   }

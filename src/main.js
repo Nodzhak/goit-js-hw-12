@@ -2,28 +2,93 @@ import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
-import axios from 'axios'; // Додано бібліотеку Axios
+import axios from 'axios';
 
+const loaderElement = document.querySelector('.loader');
 const searchForm = document.querySelector('.form');
 const galleryContainer = document.querySelector('.gallery');
-const loaderElement = document.querySelector('.loader');
+const loadMoreButton = document.querySelector('.load-more');
+let gallery;
+
+const fetchCart = async searchParamsDefaults => {
+  const response = await axios.get(`https://pixabay.com/api/`, {
+    params: searchParamsDefaults,
+  });
+  return response;
+};
+
+const thenCatch = searchParamsDefaults => {
+  fetchCart(searchParamsDefaults)
+    .then(response => {
+      if (searchParamsDefaults.page === Math.ceil(response.data.totalHits / 40)) {
+        iziToast.error({
+          message: "We're sorry, but you've reached the end of search results.",
+          position: 'center',
+        });
+        loadMoreButton.style.display = 'none';
+        loaderElement.style.display = 'none';
+      }
+      return response.data;
+    })
+    .then(json => {
+      const marcup = generateGalleryHTML(json.hits);
+      if (marcup.length < 1) {
+        iziToast.error({
+          message: 'Sorry, there are no images matching your search query. Please try again!',
+          position: 'center',
+        });
+        loaderElement.style.display = 'none';
+      } else {
+        galleryContainer.insertAdjacentHTML('beforeend', marcup);
+        if (searchParamsDefaults.page < Math.ceil(json.totalHits / 40)) {
+          loadMoreButton.style.display = 'block';
+        }
+
+        loaderElement.style.display = 'none';
+        if (gallery) {
+          gallery.refresh();
+        }
+        if (searchParamsDefaults.page > 1) {
+          window.scrollBy({
+            top: 2 * document.querySelector('.gallery-item').getBoundingClientRect().height,
+            behavior: 'smooth',
+          });
+        }
+      }
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
 
 let searchParamsDefaults = {
   key: '41631198-f5cd04d694ed896bf4215baa6',
   image_type: 'photo',
   orientation: 'horizontal',
   safesearch: true,
+  page: 1,
+  per_page: 40,
 };
 
-function showLoaderAndHideGallery() {
-  loaderElement.style.display = 'block';
-  galleryContainer.style.display = 'none';
-}
+const formSubmit = event => {
+  event.preventDefault();
+  loadMoreButton.style.display = 'none';
+  if (galleryContainer.children.length > 0) galleryContainer.innerHTML = '';
+  loaderElement.style.display = 'inline-block';
+  searchParamsDefaults.q = searchForm.searchQuery.value;
+  searchParamsDefaults.page = 1;
+  searchForm.reset();
+  thenCatch(searchParamsDefaults);
+};
 
-function hideLoaderAndShowGallery() {
-  loaderElement.style.display = 'none';
-  galleryContainer.style.display = 'flex';
-}
+const nextElements = () => {
+  loaderElement.style.display = 'inline-block';
+  searchParamsDefaults.page++;
+  thenCatch(searchParamsDefaults);
+};
+
+searchForm.addEventListener('submit', formSubmit);
+loadMoreButton.addEventListener('click', nextElements);
 
 function generateGalleryHTML(hits) {
   return hits.reduce((html, hit) => {
@@ -31,74 +96,20 @@ function generateGalleryHTML(hits) {
     return (
       html +
       `<li class="gallery-item">
-        <a href=${largeImageURL}> 
-          <img class="gallery-img" src=${webformatURL} alt=${tags} />
+        <a href="${largeImageURL}"> 
+          <img class="gallery-img" src="${webformatURL}" alt="${tags}" />
         </a>
         <div class="gallery-text-box">
           <p>Likes: <span class="text-value">${likes}</span></p>
-          <p>views: <span class="text-value">${views}</span></p>
-          <p>comments: <span class="text-value">${comments}</span></p>
-          <p>downloads: <span class="text-value">${downloads}</span></p>
+          <p>Views: <span class="text-value">${views}</span></p>
+          <p>Comments: <span class="text-value">${comments}</span></p>
+          <p>Downloads: <span class="text-value">${downloads}</span></p>
         </div>
       </li>`
     );
   }, '');
 }
 
-function renderGallery(hits) {
-  const galleryHTML = generateGalleryHTML(hits);
-  galleryContainer.innerHTML = galleryHTML;
-}
-
-function initializeImageLightbox() {
-  let lightbox = new SimpleLightbox('.gallery a', {
-    nav: true,
-    captionDelay: 250,
-    captionsData: 'alt',
-    close: true,
-    enableKeyboard: true,
-    docClose: true,
-  });
-  lightbox.refresh();
-}
-
-function handleNoResults() {
-  galleryContainer.style.display = 'none';
-  iziToast.error({
-    position: 'topRight',
-    color: 'red',
-    message: 'Sorry, there are no images matching your search query. Please try again!',
-  });
-}
-
-async function searchImages(params) {
-  showLoaderAndHideGallery();
-
-  try {
-    const response = await axios.get(`https://pixabay.com/api/?${params}`);
-    hideLoaderAndShowGallery();
-
-    if (response.status !== 200) {
-      throw new Error(response.statusText);
-    }
-
-    const { hits } = response.data;
-
-    if (hits.length > 0) {
-      renderGallery(hits);
-      initializeImageLightbox();
-    } else {
-      handleNoResults();
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-searchForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  searchParamsDefaults.q = event.target.elements.search.value.trim();
-  const searchParams = new URLSearchParams(searchParamsDefaults);
-  await searchImages(searchParams);
-  event.currentTarget.reset();
+document.addEventListener('DOMContentLoaded', () => {
+  gallery = new SimpleLightbox('.gallery a');
 });
