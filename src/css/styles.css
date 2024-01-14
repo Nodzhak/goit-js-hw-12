@@ -40,7 +40,7 @@ body {
   }
   
   .gallery-box {
-    max-width: 1440px;
+    /* max-width: 1440px; */
     
   }
   
@@ -48,11 +48,11 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     gap: 20px;
-    padding: 0 auto;
+    margin: 0 auto;
   }
   
   .gallery-item {
-    width: calc((100% - 72px) / 4);
+    width: calc((100% - 110px) / 5);
     box-shadow: 5px 5px 10px #696969;
     border-radius: 5px;
   }
